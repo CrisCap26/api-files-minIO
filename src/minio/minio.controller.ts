@@ -4,6 +4,7 @@ import {
     Get,
     HttpException,
     HttpStatus,
+    NotFoundException,
     Param,
     Post,
     Res,
@@ -46,6 +47,16 @@ export class MinioController {
     @Get('list')
     async listFiles() {
         return this.minioService.listFiles();
+    }
+
+    @Get('url/:fileName')
+    async getFileUrl(@Param('fileName') fileName: string) {
+        try {
+            const url = await this.minioService.getFileUrl(fileName);
+            return { url };
+        } catch (error) {
+            throw new NotFoundException('El archivo no existe o no se puede acceder.');
+        }
     }
 
     @Delete(':filename')

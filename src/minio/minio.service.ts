@@ -9,7 +9,7 @@ import * as express from 'express';
 export class MinioService {
     private minioClient: Client;
     private readonly bucketName: string;
-    private readonly useSSLValidations: boolean = 
+    private readonly useSSLValidations: boolean =
         this.configService.get<string>('MINIO_USE_SSL') === "true" ? true : false;
 
     constructor(private readonly configService: ConfigService) {
@@ -61,7 +61,11 @@ export class MinioService {
         const objects = this.minioClient.listObjectsV2(this.bucketName, '');
         const files: any[] = [];
         for await (const obj of objects) {
-            files.push(obj);
+            files.push({
+                ...obj,
+                url: `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${process.env.MINIO_BUCKET}/${obj.name}`,
+                tempURL: await this.getFileUrl(obj.name)
+            });
         }
         return files;
     }
@@ -70,16 +74,29 @@ export class MinioService {
         try {
             // Verificar si el archivo existe
             await this.minioClient.statObject(this.bucketName, fileName);
-            
+
             // Si existe, procedemos a eliminarlo
             await this.minioClient.removeObject(this.bucketName, fileName);
-            
+
             return { message: `El archivo ${fileName} ha sido eliminado` };
-          } catch (error) {
+        } catch (error) {
             if (error.code === 'NotFound') {
-              throw new Error(`El archivo ${fileName} no existe`);
+                throw new Error(`El archivo ${fileName} no existe`);
             }
             throw new Error(`Error eliminando el archivo: ${error.message}`);
-          }
+        }
+    }
+
+    async getFileUrl(fileName: string): Promise<string> {
+        try {
+            const fileExist = await this.minioClient.statObject(this.bucketName, fileName);
+            if (!fileExist) {
+                throw new Error(`El archivo ${fileName} no existe`);
+            }
+            const url = await this.minioClient.presignedUrl('GET', this.bucketName, fileName, 24 * 60 * 60);
+            return url;
+        } catch (error) {
+            throw new Error(`Error al obtener la URL del archivo: ${error.message}`);
+        }
     }
 }
