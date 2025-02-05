@@ -34,7 +34,8 @@ export class MinioService {
     }
 
     async uploadFile(file: Express.Multer.File) {
-        const fileName = `${Date.now()}-${file.originalname}`;
+        const fileOriginalName = file.originalname.replace(/\s+/g, '_');
+        const fileName = `${Date.now()}-${fileOriginalName}`;
         await this.minioClient.putObject(
             this.bucketName,
             fileName,
@@ -64,7 +65,7 @@ export class MinioService {
             files.push({
                 ...obj,
                 url: `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${process.env.MINIO_BUCKET}/${obj.name}`,
-                tempURL: await this.getFileUrl(obj.name)
+                //tempURL: await this.getFileUrl(obj.name)
             });
         }
         return files;
