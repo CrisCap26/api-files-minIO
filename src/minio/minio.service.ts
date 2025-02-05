@@ -34,21 +34,31 @@ export class MinioService {
     }
 
     async uploadFile(file: Express.Multer.File) {
-        const fileOriginalName = file.originalname.replace(/\s+/g, '_');
-        const fileName = `${Date.now()}-${fileOriginalName}`;
-        await this.minioClient.putObject(
-            this.bucketName,
-            fileName,
-            file.buffer,
-            file.size,
-            {
-                'Content-Type': file.mimetype
-            }
-        );
-        return {
-            message: `Archivo ${fileName} subido correctamente`,
-            fileName
-        };
+        try {
+            const fileOriginalName = file.originalname.replace(/\s+/g, '_');
+            const fileName = `${Date.now()}-${fileOriginalName}`;
+            await this.minioClient.putObject(
+                this.bucketName,
+                fileName,
+                file.buffer,
+                file.size,
+                {
+                    'Content-Type': file.mimetype
+                }
+            );
+            return {
+                success: true,
+                fileName,
+                url: `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}/${process.env.MINIO_BUCKET}/${fileName}`,
+            };
+        } catch (error) {
+            console.error('Error al subir archivo:', error);
+            return {
+                success: false,
+                message: 'Error al subir el archivo',
+                error: error.message
+            };
+        }
     }
 
     async downloadFile(fileName: string) {

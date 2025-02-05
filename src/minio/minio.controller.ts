@@ -23,7 +23,23 @@ export class MinioController {
     @Post('upload')
     @UseInterceptors(FileInterceptor('file'))
     async uploadFile(@UploadedFile() file: Express.Multer.File) {
-        return this.minioService.uploadFile(file);
+        if (!file) {
+            throw new HttpException(
+                'No se proporcionó un archivo',
+                HttpStatus.BAD_REQUEST
+            );
+        }
+        const result = await this.minioService.uploadFile(file);
+        if (!result.success) {
+            throw new HttpException(
+                'Error al subir el archivo',
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        }
+        return {
+            status: 200,
+            url: result.url
+        }
     }
 
     @Get('download/:filename')
